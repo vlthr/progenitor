@@ -944,7 +944,7 @@ impl Generator {
                 }
                 OperationResponseKind::Raw => {
                     quote! {
-                        Ok(ResponseValue::stream(#response_ident))
+                        Ok(ResponseValue::stream((#response_ident)))
                     }
                 }
                 OperationResponseKind::Upgrade => {
@@ -979,9 +979,10 @@ impl Generator {
 
             let decode = match &response.typ {
                 OperationResponseKind::Type(_) => {
+                    // FIXME: add this as a new OperationResponseKind
                     quote! {
                         Err(Error::ErrorResponse(
-                            ResponseValue::from_response(#response_ident)
+                            ResponseValue::from_raw_response(#response_ident)
                                 .await?
                         ))
                     }

@@ -76,6 +76,35 @@ impl<T: DeserializeOwned> ResponseValue<T> {
     }
 }
 
+/// Override response body deserialization.
+pub trait FromResponse {
+    /// Construct a response value directly from response parts
+    fn from_response_parts<E>(
+        status: reqwest::StatusCode,
+        headers: &reqwest::header::HeaderMap,
+        payload: Bytes,
+    ) -> Result<Self, Error<E>>
+    where
+        Self: Sized;
+}
+
+impl<T: FromResponse> ResponseValue<T> {
+    #[doc(hidden)]
+    pub async fn from_raw_response<E>(response: reqwest::Response) -> Result<Self, Error<E>> {
+        let status = response.status();
+        let headers = response.headers().clone();
+
+        let full = response.bytes().await.map_err(Error::ResponseBodyError)?;
+        let inner = T::from_response_parts::<E>(status, &headers, full)?;
+
+        Ok(Self {
+            inner,
+            status,
+            headers,
+        })
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 impl ResponseValue<reqwest::Upgraded> {
     #[doc(hidden)]
